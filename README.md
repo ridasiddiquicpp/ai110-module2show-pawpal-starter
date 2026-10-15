@@ -22,6 +22,17 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+User can enter pet info
+user can enter owner info
+add or edit tasks
+delete tasks
+chedule walk
+see tasks
+
+Owner
+Pet
+Task
+Scheduler
 ## Getting started
 
 ### Setup
