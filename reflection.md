@@ -7,10 +7,20 @@
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
 
+I included classes Owner, Pet, Task, and Scheduler.
+The owner can add, remove, and get pets. Pet has tasks, it can add, remove, and get tasks.
+A task can be rescheduled or marked as complete.
+Scheduler is where you find out what task the owner should do and when. So it has methods like get daily schedule, sort by priority of tasks, as well as add and remove tasks.
+
 **b. Design changes**
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
+
+I changed detect_conflicts inside Scheduler to return a list of tuples with both conflicting tasks inside. Previously it was returning each conflicting task, without any way of knowing which one it conflicts with.
+I also added a function to calculate end time inside of Task. End time will help detect conflicts in tasks by comparing start and end times for both tasks.
+
+Changed Scheduler to get all tasks, and require an Owner (changed design - more on that later)
 
 ---
 
