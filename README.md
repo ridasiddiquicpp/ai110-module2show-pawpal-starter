@@ -33,6 +33,20 @@ Owner
 Pet
 Task
 Scheduler
+
+## System Overview
+
+written by AI
+
+PawPal+ is built from four classes in `pawpal_system.py`:
+
+- **Task**: one care activity (description, type, due time, duration, priority, frequency, completion status). It knows which pet it belongs to. `mark_complete()` finishes it, `reschedule()` moves it, and `end_time` is calculated from the due time plus the duration.
+- **Pet**: stores pet details and its own list of tasks. `add_task()` and `remove_task()` keep the task and pet linked in both directions.
+- **Owner**: manages multiple pets. `get_all_tasks()` returns every pet's tasks together in one list.
+- **Scheduler**: the "brain". It is given an Owner and reads tasks through `owner.get_all_tasks()`, so it works across all pets instead of one. It does not store its own copy of the tasks.
+
+written by AI
+
 ## Getting started
 
 ### Setup
@@ -57,6 +71,7 @@ pip install -r requirements.txt
 
 Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
 
+
 ```
 # e.g.:
 # Daily plan for Biscuit (Golden Retriever):
@@ -65,32 +80,65 @@ Paste a sample of your app's CLI or Streamlit output here so a reader can see wh
 #   ...
 ```
 
+Today's Schedule
+09:00:AM - Cheeto - vet appointment - 60 minutes
+05:00:PM - Cheeto - playtime - 30 minutes
+06:00:PM - Misty - evening walk - 30 minutes
+
+Tasks by Priority
+high - 09:00:AM - Cheeto - vet appointment - 60 minutes
+high - 06:00:PM - Misty - evening walk - 30 minutes
+medium - 05:00:PM - Cheeto - playtime - 30 minutes
+
 ## 🧪 Testing PawPal+
 
-```bash
-# Run the full test suite:
-pytest
+written by AI
 
-# Run with coverage:
-pytest --cov
+**Run the demo** (prints today's schedule and the tasks sorted by priority). Run from the project folder, `ai110-module2show-pawpal-starter`:
+
+```bash
+python main.py
 ```
+
+**Run the tests** from the same folder. Use `python -m pytest` so the tests can import `pawpal_system.py`:
+
+```bash
+python -m pytest -v
+```
+
+**Test coverage summary:**
+
+- `test_mark_complete`: calling `mark_complete()` changes a task from incomplete to complete.
+- `test_add_task`: adding a task to a pet increases that pet's task count by one.
+- `test_detect_conflicts`: two overlapping tasks on different pets are reported as one conflicting pair.
 
 Sample test output:
 
 ```
-# Paste your pytest output here
+============================= test session starts =============================
+collecting ... collected 3 items
+
+tests/test_pawpal.py::test_mark_complete PASSED                          [ 33%]
+tests/test_pawpal.py::test_add_task PASSED                               [ 66%]
+tests/test_pawpal.py::test_detect_conflicts PASSED                       [100%]
+
+============================== 3 passed in 0.02s ==============================
 ```
+
+written by AI
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
+written by AI
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `Scheduler.sort_by_priority`, `get_daily_schedule` | Priority first (high, medium, low), then earliest time. The daily schedule is ordered by time. |
+| Filtering | `get_daily_schedule`, `get_tasks_by_pet`, `get_upcoming_tasks` | By day, by pet, or incomplete tasks still ahead. All read from every pet's tasks. |
+| Conflict handling | `Scheduler.detect_conflicts` | Returns pairs of incomplete tasks whose time windows overlap, including across different pets. Back-to-back tasks are not a conflict. |
+| Recurring tasks | `Task.frequency` | Each task stores "once", "daily" or "weekly". The schedule does not expand recurring tasks yet. |
+
+written by AI
 
 ## 📸 Demo Walkthrough
 
