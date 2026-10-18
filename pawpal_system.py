@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple
 
@@ -15,11 +15,23 @@ class Task:
     priority: str = "medium"
     frequency: str = "once"  # "once", "daily", "weekly"
     is_complete: bool = False
-    pet: Optional[Pet] = field(default=None, repr=False)
+    pet: Optional[Pet] = field(default=None, repr=False, compare=False)
 
     def mark_complete(self) -> None:
         """Mark this task as completed."""
         self.is_complete = True
+
+    def next_occurrence(self) -> Optional[Task]:
+        """Return a fresh copy due today + 1 period (same time of day), or None if it doesn't repeat."""
+        deltas = {"daily": timedelta(days=1), "weekly": timedelta(weeks=1)}
+        if self.frequency not in deltas:
+            return None
+        next_date = date.today() + deltas[self.frequency]
+        return replace(
+            self,
+            due_time=datetime.combine(next_date, self.due_time.time()),
+            is_complete=False,
+        )
 
     def reschedule(self, new_time: datetime) -> None:
         """Move this task to a new due time."""
@@ -41,7 +53,7 @@ class Pet:
     species: str
     breed: str = ""
     age: int = 0
-    owner: Optional[Owner] = field(default=None, repr=False)
+    owner: Optional[Owner] = field(default=None, repr=False, compare=False)
     tasks: List[Task] = field(default_factory=list)
 
     def add_task(self, task: Task) -> None:
@@ -122,6 +134,40 @@ class Scheduler:
 
         return pet_tasks
 
+    def filter_tasks(
+        self,
+        is_complete: Optional[bool] = None,
+        pet_name: Optional[str] = None,
+    ) -> List[Task]:
+        """Return tasks filtered by completion status and/or pet name.
+
+        A filter left as None is ignored, so passing neither returns every task.
+        """
+        tasks = self.owner.get_all_tasks()
+        if is_complete is not None:
+            tasks = [t for t in tasks if t.is_complete == is_complete]
+        if pet_name is not None:
+            tasks = [
+                t for t in tasks
+                if t.pet is not None and t.pet.name.lower() == pet_name.lower()
+            ]
+        return tasks
+
+    def mark_task_complete(self, task: Task) -> Optional[Task]:
+        """Mark a task complete and, if it repeats, add the next occurrence to its pet."""
+        if task.is_complete:  # guard against creating duplicate occurrences
+            return None
+        task.mark_complete()
+
+        next_task = task.next_occurrence()
+        if next_task is None:
+            return None
+
+        next_task.task_id = max(t.task_id for t in self.owner.get_all_tasks()) + 1
+        if task.pet is not None:
+            task.pet.add_task(next_task)  # also sets next_task.pet
+        return next_task
+
     def get_upcoming_tasks(self) -> List[Task]:
         """Return incomplete tasks due in the future."""
         now = datetime.now()
@@ -152,6 +198,53 @@ class Scheduler:
         return conflicts
 
 
+
+    @staticmethod
+    def _format_conflict(first: Task, second: Task) -> str:
+        """Build a warning message for two overlapping tasks."""
+        first_pet = first.pet.name if first.pet else "no pet"
+        second_pet = second.pet.name if second.pet else "no pet"
+        kind = "same pet" if first.pet is second.pet and first.pet else "different pets"
+        return (
+            f"WARNING ({kind}): '{first.description}' ({first_pet}, "
+            f"{first.due_time:%m/%d %I:%M %p}-{first.end_time:%I:%M %p}) overlaps "
+            f"'{second.description}' ({second_pet}, "
+            f"{second.due_time:%m/%d %I:%M %p}-{second.end_time:%I:%M %p})"
+        )
+
+    def get_conflict_warnings(self) -> List[str]:
+        """Return a warning message for each pair of overlapping incomplete tasks.
+
+        Works for the same pet or different pets. Never raises: if anything goes
+        wrong while checking, a single warning is returned instead of crashing.
+        """
+        try:
+            return [self._format_conflict(a, b) for a, b in self.detect_conflicts()]
+        except Exception as error:
+            return [f"WARNING: could not check for conflicts ({error})"]
+
+    def add_task(self, pet: Pet, task: Task) -> List[str]:
+        """Add a task to a pet and return warnings for any conflicts it creates.
+
+        The task is always added; conflicts only produce warning messages.
+        """
+        pet.add_task(task)  # add first so task.pet is set for the warning text
+        try:
+            clashes = [
+                other for other in self.owner.get_all_tasks()
+                if other is not task
+                and not other.is_complete
+                and other.due_time < task.end_time
+                and task.due_time < other.end_time
+            ]
+            return [self._format_conflict(task, other) for other in clashes]
+        except Exception as error:
+            return [f"WARNING: could not check for conflicts ({error})"]
+
+    def sort_by_time(self) -> List[Task]:
+        """Return all tasks in chronological order (date, then time)."""
+        # due_time is a datetime, so comparing it directly covers both date and time.
+        return sorted(self.owner.get_all_tasks(), key=lambda t: t.due_time)
 
     def sort_by_priority(self) -> List[Task]:
         """Return tasks sorted from highest to lowest priority."""
