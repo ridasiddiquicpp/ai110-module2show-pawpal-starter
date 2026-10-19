@@ -1,15 +1,75 @@
 classDiagram
-    %% Replace the placeholders below with your actual classes, attributes, methods, and relationships.
-    %% Keep this file updated so it matches your final implementation.
-
-    class ClassName {
-        +type attribute
-        +method() returnType
+    class Priority {
+        <<enumeration>>
+        HIGH
+        MEDIUM
+        LOW
     }
 
-    class AnotherClass {
-        +type attribute
-        +method() returnType
+    class Frequency {
+        <<enumeration>>
+        ONCE
+        DAILY
+        WEEKLY
     }
 
-    ClassName --> AnotherClass : relationship
+    class Task {
+        +int task_id
+        +str description
+        +str task_type
+        +datetime due_time
+        +int duration_minutes
+        +Priority priority
+        +Frequency frequency
+        +bool is_complete
+        +Pet pet
+        +end_time datetime
+        +mark_complete() void
+        +next_occurrence() Task
+        +reschedule(new_time datetime) void
+    }
+
+    class Pet {
+        +int pet_id
+        +str name
+        +str species
+        +str breed
+        +int age
+        +Owner owner
+        +List~Task~ tasks
+        +add_task(task Task) void
+        +remove_task(task Task) void
+        +get_tasks() List~Task~
+    }
+
+    class Owner {
+        +int owner_id
+        +str name
+        +str email
+        +List~Pet~ pets
+        +add_pet(pet Pet) void
+        +remove_pet(pet Pet) void
+        +get_pets() List~Pet~
+        +get_all_tasks() List~Task~
+    }
+
+    class Scheduler {
+        +Owner owner
+        +get_daily_schedule(day date) List~Task~
+        +get_tasks_by_pet(pet Pet) List~Task~
+        +filter_tasks(is_complete bool, pet_name str) List~Task~
+        +get_upcoming_tasks() List~Task~
+        +sort_by_time() List~Task~
+        +sort_by_priority() List~Task~
+        +detect_conflicts() List~Tuple~
+        +get_conflict_warnings() List~str~
+        +add_task(pet Pet, task Task) List~str~
+        +mark_task_complete(task Task) Task
+    }
+
+    Owner "1" -- "0..*" Pet : owns
+    Pet "1" -- "0..*" Task : has
+    Scheduler "1" --> "1" Owner : reads tasks via get_all_tasks()
+    Scheduler ..> Task : sorts, filters, completes
+    Task --> Priority
+    Task --> Frequency

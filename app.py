@@ -46,10 +46,10 @@ At minimum, your system should:
 st.divider()
 
 
-st.subheader("Quick Demo Inputs (UI only)")
+st.subheader("Basic Information")
 owner_name = st.text_input("Owner name", value="Jordan")
 owner.name = owner_name
-st.write(owner)
+# st.write(owner)
 
 
 pet_name = st.text_input("Pet name", value="Mochi")
@@ -68,7 +68,11 @@ if not owner.pets:
     st.warning("Add a pet first, then you can add tasks.")
 
 else:
-    pet_choice = st.selectbox("Pet", owner.pets, format_func=lambda p: p.name)
+    pet_index = st.selectbox(
+        "Pet", range(len(owner.pets)), format_func=lambda i: owner.pets[i].name
+    )
+    pet_choice = owner.pets[pet_index]
+
 
 
     col1, col2, col3 = st.columns(3)
@@ -110,32 +114,111 @@ if st.button("Add task"):
                 st.warning(warning)
 
 
-all_tasks = owner.get_all_tasks()
-if all_tasks:
-    st.write("Current tasks:")
-    for task in all_tasks:
-        st.write(
-            f"{task.pet.name} - {task.description} ({task.priority}) "
-            f"at {task.due_time:%b %d, %I:%M %p}"
-        )
-else:
-    st.info("No tasks yet. Add one above.")
+scheduler = Scheduler(owner)
+
+warnings = scheduler.get_conflict_warnings()
+if warnings:
+    st.markdown("### ⚠️ Scheduling Conflicts")
+    for message in warnings:
+        st.warning(message)
+elif owner.get_all_tasks():
+    st.success("No scheduling conflicts. Your schedule looks good!")
+
 
 st.divider()
 
+st.markdown("### Your Tasks")
+if "complete_msg" in st.session_state:
+    st.success(st.session_state.pop("complete_msg"))
+
+if owner.get_all_tasks():
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        sort_by = st.radio("Sort by", ["Time", "Priority"], horizontal=True)
+    with col_b:
+        pet_filter = st.selectbox("Pet filter", ["All"] + [p.name for p in owner.pets])
+    with col_c:
+        status_filter = st.selectbox("Status", ["All", "Incomplete", "Complete"])
+
+    
+    incomplete = scheduler.filter_tasks(is_complete=False)
+    if incomplete:
+        st.markdown("**Mark a task complete**")
+        select_col, button_col = st.columns([4, 1])
+        with select_col:
+            task_index = st.selectbox(
+                "Task to complete",
+                range(len(incomplete)),
+                format_func=lambda i: f"{incomplete[i].pet.name} - {incomplete[i].description} ({incomplete[i].due_time:%b %d, %I:%M %p})",
+                label_visibility="collapsed",
+            )
+        with button_col:
+            mark_clicked = st.button("Mark complete")
+
+        if mark_clicked:
+            next_task = scheduler.mark_task_complete(incomplete[task_index])
+            message = f"Marked '{incomplete[task_index].description}' complete."
+            if next_task:
+                message += f" Next {next_task.frequency} task scheduled for {next_task.due_time:%b %d, %I:%M %p}."
+            st.session_state.complete_msg = message
+            st.rerun()
+
+    if sort_by == "Priority":
+        sorted_tasks = scheduler.sort_by_priority()
+    else:
+        sorted_tasks = scheduler.sort_by_time()
+
+    wanted = scheduler.filter_tasks(
+        is_complete={"All": None, "Incomplete": False, "Complete": True}[status_filter],
+        pet_name=None if pet_filter == "All" else pet_filter,
+    )
+    sorted_tasks = [t for t in sorted_tasks if any(t is w for w in wanted)]
+
+    if sorted_tasks:
+        st.table(
+            [
+                {
+                    "Date": f"{t.due_time:%b %d}",
+                    "Time": f"{t.due_time:%I:%M %p}",
+                    "Pet": t.pet.name,
+                    "Task": t.description,
+                    "Priority": str(t.priority),
+                    "Duration (min)": t.duration_minutes,
+                    "Done": "✅" if t.is_complete else "",
+                }
+                for t in sorted_tasks
+            ]
+        )
+    else:
+       st.info("No tasks match these filters.") 
+else:
+    st.info("No tasks yet. Add one above.")
+
+
+
 st.subheader("Build Schedule")
-st.caption("This button should call your scheduling logic once you implement it.")
+st.caption("Pick a day to see its tasks in time order.")
+
+schedule_day = st.date_input("Schedule for", key="schedule_day")
 
 if st.button("Generate schedule"):
-    st.warning(
-        "Not implemented yet. Next step: create your scheduling logic (classes/functions) and call it here."
-    )
-    st.markdown(
-        """
-Suggested approach:
-1. Design your UML (draft).
-2. Create class stubs (no logic).
-3. Implement scheduling behavior.
-4. Connect your scheduler here and display results.
-"""
-    )
+    todays_tasks = scheduler.get_daily_schedule(schedule_day)
+    if todays_tasks:
+        st.success(f"{len(todays_tasks)} task(s) scheduled for {schedule_day:%B %d, %Y}")
+        st.table(
+            [
+                {
+                    "Time": f"{t.due_time:%I:%M %p}",
+                    "Pet": t.pet.name,
+                    "Task": t.description,
+                    "Priority": str(t.priority),
+                    "Duration (min)": t.duration_minutes,
+                    "Done": "✅" if t.is_complete else "",
+
+                }
+                for t in todays_tasks
+            ]
+        )
+    else:
+        st.info(f"Nothing scheduled for {schedule_day:%B %d, %Y}.")
+
