@@ -194,6 +194,20 @@ I'm not giving 5 stars because some methods don't have direct tests, such as fil
 
 
 
+## UI and Output Formatting
+
+
+I used streamlit's built-in components to make the page easy to read.
+
+I used colored message boxes, by using st.success, st.warning, st.info, and st.error for different outputs to show the user, what is an error, success, or warning.
+
+
+I used st.table to structure the tasks into a clean table, with date, time, pet, task, priority, duration, and done columns. I added st.radio to let the user sort the tasks and st.selectbox for pet and status filters.
+
+
+Along with this, I used emojis to make the page more visual for the user. I used ✅ in the Done column for completed tasks and ⚠️ to mark the scheduling conflicts section.
+
+
 ## 📸 Demo Walkthrough
 
 Describe your app in numbered steps so a reader can follow along without watching a video:
@@ -205,13 +219,13 @@ After a user marks a task as complete, a green check mark is shown next to the t
 
 1. Run 'streamlit run app.py'
 2. In 'Basic Information' section, enter Jordan in 'Owner name' box
-3. Type Mochi in 'Pet name' box and dog in 'species' box. Click 'Add pet'
-4. Type Max in 'Pet name' box and dog in 'species' box. Click 'Add pet'
+3. Type Mochi in 'Pet name' box and select dog for species. Click 'Add pet'
+4. Type Max in 'Pet name' box and and select dog for species. Click 'Add pet'
 5. In 'Tasks' section, pick Mochi from dropdown and add Morning walk with frequency set to daily with low priority with time 8:00AM on Oct 18, 2026
 6. Pick Max from dropdown and add Vet Appointment with frequency set to once with high priority with time 9:00AM on Oct 18, 2026
 7. Now in 'Your Tasks' section you can sort by priority or time and see the difference.
 8. Can filter by pet, either pick Max, Mochi, or all to see different tasks
-9. Use the dropdown beloe 'Mark a task complete' and select 'Mochi - Morning walk (Oct 18, 08:00 AM)' and then press the 'Mark complete' button
+9. Use the dropdown below 'Mark a task complete' and select 'Mochi - Morning walk (Oct 18, 08:00 AM)' and then press the 'Mark complete' button
 10. Notice the same task is created for the next day. And the today's task is marked as done.
 11. Use 'Status' dropdown to see all complete, incomplete, or all tasks
 12. On the 'Build Schedule' section pick 2026/10/18 from calendar and click 'Generate Schedule' button.
@@ -220,8 +234,8 @@ After a user marks a task as complete, a green check mark is shown next to the t
 14. In the 'Tasks' section select Max from dropdown and add playtime with time 6:00PM on Oct 18, 2026 
 15. Repeat number 14
 16. You will see that this task is not added, because it has same pet at same time.
-15. In the 'Tasks' section select Mochi from dropdown and add walk with time 6:00PM on Oct 18, 2026 
-16. A warning is shown that both are scheduled at same time, but the task is still added
+17. In the 'Tasks' section select Mochi from dropdown and add walk with time 6:00PM on Oct 18, 2026 
+18. A warning is shown that both are scheduled at same time, but the task is still added
 
 
 
