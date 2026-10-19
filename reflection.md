@@ -36,6 +36,18 @@ Changed Scheduler to get all tasks, and require an Owner (changed design - more 
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
 
+One tradeoff my scheduler makes is how it handles recurring tasks that overlap. When a daily or weekly task is marked complete, the next occurrence is always added to the pet, even if it overlaps another task on that pet. 
+
+I considered rejecting it, shifting it to the next free slot, or skipping it, but decided to leave it in anyways. 
+
+This is reasonable for this scenario because the logic was complicated and would take more time to flesh out, skipping it could stop the recurrence, and shifting it would move a task off its usual time without asking. 
+The owner is in a better position then the schedule to decide which task should move. 
+
+Adding it and flagging the clash keeps the schedule predictable and keeps the code simple, at the cost of letting a conflict exist until the owner fixes it.
+
+Adding it keeps the schedule predictable and keeps the code simple. The cost is that a conflict can exist without the owner being told. The method detect_conflicts can find the overlap, but the app does not show it yet, so a future improvement would be to display those warnings in the UI.
+
+
 ---
 
 ## 3. AI Collaboration
@@ -45,11 +57,19 @@ Changed Scheduler to get all tasks, and require an Owner (changed design - more 
 - How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
 - What kinds of prompts or questions were most helpful?
 
-written by AI
 
-I used AI to generate the Mermaid class diagram and the Python class skeletons, to review the skeleton for missing relationships and logic problems, and to explain each method before I wrote it. It influenced several design decisions: the review pointed out that `detect_conflicts` should return pairs of tasks and that `Task` needed an `end_time`, and it showed that the Scheduler keeping its own task list duplicated data the pets already held. The most helpful questions were the ones asking why, such as why the Scheduler should not hold its own list and why `extend` is used instead of `append`.
+I used AI to generate the Mermaid class diagram, and I reviewed it asking AI questions to understand some of the methods listed. Then I used AI to generate the class skeletons in pawpal_system.py. In this phase I used AI very extensively to figure out what relationships between the classes was and different methods we would need to have for that. Methods like sorting, and filtering in the Scheduler class I worked with AI to generate skeleton. 
 
-written by AI
+
+AI also influenced certain design decisions, like detect_conflicts should return a pair of tasks, instead of just returning a list of all conflicting tasks and that Task needed an end_time to make sure we could properly detect conflicts.
+
+
+The AI's conflict design only warned about overlapping tasks on the same pet. I rejected this because I wanted to make sure that a pet can't do two tasks at the same time. So I worked with AI to completely reject a task that overlaps another incomplete task on the same pet. 
+Overlaps between different pets still only produce a warning, since one owner could handle two pets at once. I verified this with tests for partial overlaps, exact duplicates, and different pets.
+
+
+The questions that were most helpful were asking AI to explain why it did something, such as why the Scheduler should not hold its own list and why extend was used instead of append.
+
 
 **b. Judgment and verification**
 

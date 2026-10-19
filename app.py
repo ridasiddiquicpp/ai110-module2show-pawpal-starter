@@ -1,5 +1,5 @@
 import streamlit as st
-from pawpal_system import Owner, Pet, Task
+from pawpal_system import Owner, Pet, Scheduler, Task
 from datetime import datetime
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
@@ -100,8 +100,14 @@ if st.button("Add task"):
             priority,
             frequency,
         )
-        pet_choice.add_task(task)
-        st.success(f"Added {task.description} for {pet_choice.name}")
+        try:
+            warnings = Scheduler(owner).add_task(pet_choice, task)
+        except ValueError as error:
+            st.error(f"Task not added: {error}")
+        else:
+            st.success(f"Added {task.description} for {pet_choice.name}")
+            for warning in warnings:
+                st.warning(warning)
 
 
 all_tasks = owner.get_all_tasks()

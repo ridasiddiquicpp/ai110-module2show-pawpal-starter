@@ -75,8 +75,10 @@ for warning in scheduler.add_task(cheeto, nails):
     print(warning)
 # Same pet (Misty), overlapping the end of the bath (10:00-10:30)
 brush = Task(22, "brushing", "grooming", datetime(2026, 10, 16, 10, 15), 20, "low")
-for warning in scheduler.add_task(misty, brush):
-    print(warning)
+try:
+    scheduler.add_task(misty, brush)
+except ValueError as error:
+    print("REJECTED:", error)
 
 print("All conflicts now:", len(scheduler.get_conflict_warnings()))
 

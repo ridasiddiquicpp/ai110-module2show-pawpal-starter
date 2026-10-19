@@ -36,16 +36,25 @@ Scheduler
 
 ## System Overview
 
-written by AI
+In pawpal_system.py I added 4 main classes, Task, Pet, Owner, and Scheduler.
 
-PawPal+ is built from four classes in `pawpal_system.py`:
+The Task class is used to create a task, with description, due time, duration, priority, frequency, and completion status. It has methods to mark task complete, reschedule, and create a copy of a repeating task.
 
-- **Task**: one care activity (description, type, due time, duration, priority, frequency, completion status). It knows which pet it belongs to. `mark_complete()` finishes it, `reschedule()` moves it, and `end_time` is calculated from the due time plus the duration.
-- **Pet**: stores pet details and its own list of tasks. `add_task()` and `remove_task()` keep the task and pet linked in both directions.
-- **Owner**: manages multiple pets. `get_all_tasks()` returns every pet's tasks together in one list.
-- **Scheduler**: the "brain". It is given an Owner and reads tasks through `owner.get_all_tasks()`, so it works across all pets instead of one. It does not store its own copy of the tasks.
+A task can be assigned to a certain pet. You can either include which pet the task is for when creating the task, or add a task to a certain pet later.
 
-written by AI
+The pet class stores the pet details and its own list of tasks. It has methods like add_task and remove_task, which keep task and pet linked in both directions.
+
+The owner class stores a list of all pets, and the get_all_tasks method returns every pet's tasks together.
+
+The scheduler class is given an Owner and reads all the owner's tasks. It can get the daily schedule using owner.get_all_tasks, filter tasks by pet or completion status, sort by time and priority, create the next task when a repeating task is completed, and detect conflicts.
+
+When you complete a daily task, Scheduler.mark_task_complete marks it done, asks the task for next_occurence, and adds the new task to the same pet.
+ 
+When you add a task through Scheduler.add_task, it rejects a task that overlaps another on the same pet and warns if it overlaps a different pet's task.
+
+An owner has pets, each pets has tasks, and the Scheduler works on top of the owner to read and manage all of them.
+
+
 
 ## Getting started
 
@@ -81,64 +90,131 @@ Paste a sample of your app's CLI or Streamlit output here so a reader can see wh
 ```
 
 Today's Schedule
+08:00:AM - Misty - give medicine - 5 minutes
 09:00:AM - Cheeto - vet appointment - 60 minutes
+12:00:PM - Cheeto - grooming - 45 minutes
 05:00:PM - Cheeto - playtime - 30 minutes
 06:00:PM - Misty - evening walk - 30 minutes
 
 Tasks by Priority
+high - 08:00:AM - Misty - give medicine - 5 minutes
 high - 09:00:AM - Cheeto - vet appointment - 60 minutes
 high - 06:00:PM - Misty - evening walk - 30 minutes
 medium - 05:00:PM - Cheeto - playtime - 30 minutes
+medium - 07:30:AM - Misty - breakfast - 15 minutes
+low - 12:00:PM - Cheeto - grooming - 45 minutes
+
+Recurring tasks
+Tasks before: 6
+Tasks after: 7
+Next walk: 10/17 06:00 PM - Misty - id 7
+Next vet (once): None
+Second completion of walk: None
+
+Conflict detection
+Before adding conflicts: no conflicts
+Adding bath: no conflicts
+WARNING (different pets): 'nail trim' (Cheeto, 10/16 10:00 AM-10:15 AM) overlaps 'bath' (Misty, 10/16 10:00 AM-10:30 AM)
+REJECTED: Misty already has 'bath' (10/16 10:00 AM-10:30 AM) at that time
+All conflicts now: 1
+
+Raw order (as added)
+10/16 09:00 AM - Cheeto - vet appointment - done
+10/16 05:00 PM - Cheeto - playtime - pending
+10/16 12:00 PM - Cheeto - grooming - pending
+10/16 10:00 AM - Cheeto - nail trim - pending
+10/16 06:00 PM - Misty - evening walk - done
+10/17 07:30 AM - Misty - breakfast - pending
+10/16 08:00 AM - Misty - give medicine - done
+10/17 06:00 PM - Misty - evening walk - pending
+10/16 10:00 AM - Misty - bath - pending
+
+Sorted by time
+10/16 08:00 AM - Misty - give medicine - done
+10/16 09:00 AM - Cheeto - vet appointment - done
+10/16 10:00 AM - Cheeto - nail trim - pending
+10/16 10:00 AM - Misty - bath - pending
+10/16 12:00 PM - Cheeto - grooming - pending
+10/16 05:00 PM - Cheeto - playtime - pending
+10/16 06:00 PM - Misty - evening walk - done
+10/17 07:30 AM - Misty - breakfast - pending
+10/17 06:00 PM - Misty - evening walk - pending
+
+Incomplete tasks
+10/16 05:00 PM - Cheeto - playtime - pending
+10/16 12:00 PM - Cheeto - grooming - pending
+10/16 10:00 AM - Cheeto - nail trim - pending
+10/17 07:30 AM - Misty - breakfast - pending
+10/17 06:00 PM - Misty - evening walk - pending
+10/16 10:00 AM - Misty - bath - pending
+
+Completed tasks
+10/16 09:00 AM - Cheeto - vet appointment - done
+10/16 06:00 PM - Misty - evening walk - done
+10/16 08:00 AM - Misty - give medicine - done
+
+Misty's tasks
+10/16 06:00 PM - Misty - evening walk - done
+10/17 07:30 AM - Misty - breakfast - pending
+10/16 08:00 AM - Misty - give medicine - done
+10/17 06:00 PM - Misty - evening walk - pending
+10/16 10:00 AM - Misty - bath - pending
 
 ## 🧪 Testing PawPal+
 
-written by AI
+Run from the project folder:
+`ai110-module2show-pawpal-starter`
 
-**Run the demo** (prints today's schedule and the tasks sorted by priority). Run from the project folder, `ai110-module2show-pawpal-starter`:
+Command to run tests:
+python -m pytest
 
-```bash
-python main.py
-```
-
-**Run the tests** from the same folder. Use `python -m pytest` so the tests can import `pawpal_system.py`:
-
-```bash
+Command to run test with each test name:
 python -m pytest -v
-```
 
-**Test coverage summary:**
 
-- `test_mark_complete`: calling `mark_complete()` changes a task from incomplete to complete.
-- `test_add_task`: adding a task to a pet increases that pet's task count by one.
-- `test_detect_conflicts`: two overlapping tasks on different pets are reported as one conflicting pair.
+Description of what tests cover:
+These tests cover sorting by time and pets, making sure with recurring tasks that completing a daily/weekly task creates another one, conflicting tasks are either rejected or gives a warning, validating and making sure unknown frequency or priority values are rejected. Also adding task to a pet, and marking a task complete is tested
 
-Sample test output:
 
+Output of successful test run:
 ```
 ============================= test session starts =============================
-collecting ... collected 3 items
+platform win32 -- Python 3.13.15, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\Rida\Desktop\CodePathProject2\ai110-module2show-pawpal-starter
+plugins: anyio-4.15.1
+collected 29 items
 
-tests/test_pawpal.py::test_mark_complete PASSED                          [ 33%]
-tests/test_pawpal.py::test_add_task PASSED                               [ 66%]
-tests/test_pawpal.py::test_detect_conflicts PASSED                       [100%]
+tests\test_pawpal.py .............................                       [100%]
 
-============================== 3 passed in 0.02s ==============================
+============================= 29 passed in 0.02s ==============================
 ```
 
-written by AI
+Confidence Level:
+4 stars 
+
+I'm giving 4 stars because all 29 tests pass, and they cover sorting, recurring tasks, conflict detection and input validation, including some edge cases. 
+I'm not giving 5 stars because some methods don't have direct tests, such as filter_tasks and get_daily_schedule. These along with more edge case tests can be added to be more extensive, and the Streamlit UI isn't tested.
+
 
 ## 📐 Smarter Scheduling
 
-written by AI
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | `Scheduler.sort_by_priority`, `get_daily_schedule` | Priority first (high, medium, low), then earliest time. The daily schedule is ordered by time. |
-| Filtering | `get_daily_schedule`, `get_tasks_by_pet`, `get_upcoming_tasks` | By day, by pet, or incomplete tasks still ahead. All read from every pet's tasks. |
-| Conflict handling | `Scheduler.detect_conflicts` | Returns pairs of incomplete tasks whose time windows overlap, including across different pets. Back-to-back tasks are not a conflict. |
-| Recurring tasks | `Task.frequency` | Each task stores "once", "daily" or "weekly". The schedule does not expand recurring tasks yet. |
+| Sorting by time | `Scheduler.sort_by_time`, `get_daily_schedule` | Sorts in chronological order (earliest date and time first). `get_daily_schedule` returns only one day's tasks, sorted by time.
+ |
 
-written by AI
+| Sorting by priority | `Scheduler.sort_by_priority` | Sorts by priority, high, medium, or low. |
+
+| Filtering | `Scheduler.filter_tasks`, `get_tasks_by_pet`, `get_upcoming_tasks` | Filters by completion status or pet name. |
+
+| Conflict detection | `Scheduler.detect_conflicts`, `get_conflict_warnings` | Detects pairs of incomplete tasks whose time windows overlap, across pets.  |
+
+| Conflict prevention | `Scheduler.add_task` | Rejects a task that overlaps another on the same pet. Overlaps across different pets only gives a warning. |
+
+| Recurring tasks | `Task.next_occurrence`, `Scheduler.mark_task_complete` | Completing a daily or weekly task creates the next copy one day or week after its due time and adds it to the same pet.  |
+
+
 
 ## 📸 Demo Walkthrough
 

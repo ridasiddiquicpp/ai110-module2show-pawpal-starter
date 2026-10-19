@@ -2,36 +2,75 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
+from enum import Enum
 from typing import List, Optional, Tuple
+
+
+class _StrEnum(str, Enum):
+    """String enum that accepts any casing/whitespace and prints as its plain value."""
+
+    @classmethod
+    def _missing_(cls, value):
+        """Match a string to a member ignoring case and surrounding spaces."""
+        if isinstance(value, str):
+            for member in cls:
+                if member.value == value.strip().lower():
+                    return member
+        return None
+
+    def __str__(self) -> str:
+        """Return the plain string value, e.g. "high"."""
+        return self.value
+
+
+class Priority(_StrEnum):
+    """How urgent a task is: high, medium or low."""
+
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class Frequency(_StrEnum):
+    """How often a task repeats: once, daily or weekly."""
+
+    ONCE = "once"
+    DAILY = "daily"
+    WEEKLY = "weekly"
 
 
 @dataclass
 class Task:
+    """A single pet care task with a due time, duration, priority and frequency."""
+
     task_id: int
     description: str
     task_type: str
     due_time: datetime
     duration_minutes: int
-    priority: str = "medium"
-    frequency: str = "once"  # "once", "daily", "weekly"
+    priority: Priority = Priority.MEDIUM
+    frequency: Frequency = Frequency.ONCE
     is_complete: bool = False
     pet: Optional[Pet] = field(default=None, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        """Convert plain strings to enums; an unknown value raises ValueError."""
+        self.priority = Priority(self.priority)
+        self.frequency = Frequency(self.frequency)
 
     def mark_complete(self) -> None:
         """Mark this task as completed."""
         self.is_complete = True
 
+
     def next_occurrence(self) -> Optional[Task]:
-        """Return a fresh copy due today + 1 period (same time of day), or None if it doesn't repeat."""
-        deltas = {"daily": timedelta(days=1), "weekly": timedelta(weeks=1)}
+        """Return a fresh copy due one period after this task's due time, or None if it doesn't repeat."""
+        deltas = {Frequency.DAILY: timedelta(days=1), Frequency.WEEKLY: timedelta(weeks=1)}
         if self.frequency not in deltas:
             return None
-        next_date = date.today() + deltas[self.frequency]
-        return replace(
-            self,
-            due_time=datetime.combine(next_date, self.due_time.time()),
-            is_complete=False,
-        )
+        next_due = self.due_time + deltas[self.frequency]
+        return replace(self, due_time=next_due, is_complete=False)
+
 
     def reschedule(self, new_time: datetime) -> None:
         """Move this task to a new due time."""
@@ -48,6 +87,8 @@ class Task:
 
 @dataclass
 class Pet:
+    """A pet that belongs to an owner and holds its own list of tasks."""
+
     pet_id: int
     name: str
     species: str
@@ -66,7 +107,7 @@ class Pet:
 
     def remove_task(self, task: Task) -> None:
         """Remove a task from this pet."""
-        #rebuild pet list, keeping every task expect the one being removed
+        #rebuild pet list, keeping every task except the one being removed
         self.tasks = [t for t in self.tasks if t is not task]
         if task.pet is self:
             task.pet = None
@@ -79,6 +120,8 @@ class Pet:
 
 @dataclass
 class Owner:
+    """A pet owner who manages one or more pets."""
+
     owner_id: int
     name: str
     email: str = ""
@@ -112,7 +155,10 @@ class Owner:
 
 
 class Scheduler:
+    """Sorts, filters and checks conflicts across all of an owner's tasks."""
+
     def __init__(self, owner: Owner) -> None:
+        """Create a scheduler for the given owner."""
         self.owner = owner
 
     def get_daily_schedule(self, day: date) -> List[Task]:
@@ -163,7 +209,7 @@ class Scheduler:
         if next_task is None:
             return None
 
-        next_task.task_id = max(t.task_id for t in self.owner.get_all_tasks()) + 1
+        next_task.task_id = max((t.task_id for t in self.owner.get_all_tasks()), default=task.task_id) + 1
         if task.pet is not None:
             task.pet.add_task(next_task)  # also sets next_task.pet
         return next_task
@@ -226,8 +272,23 @@ class Scheduler:
     def add_task(self, pet: Pet, task: Task) -> List[str]:
         """Add a task to a pet and return warnings for any conflicts it creates.
 
-        The task is always added; conflicts only produce warning messages.
+        A pet can't do two things at once, so a task overlapping an incomplete
+        task of the same pet is rejected with a ValueError and not added.
+        Overlaps with other pets' tasks are allowed and only produce warnings.
         """
+        for existing in pet.get_tasks():
+            if (
+                not existing.is_complete
+                and existing is not task
+                and existing.due_time < task.end_time
+                and task.due_time < existing.end_time
+            ):
+                raise ValueError(
+                    f"{pet.name} already has '{existing.description}' "
+                    f"({existing.due_time:%m/%d %I:%M %p}-{existing.end_time:%I:%M %p}) "
+                    f"at that time"
+                )
+
         pet.add_task(task)  # add first so task.pet is set for the warning text
         try:
             clashes = [
@@ -248,8 +309,8 @@ class Scheduler:
 
     def sort_by_priority(self) -> List[Task]:
         """Return tasks sorted from highest to lowest priority."""
-        order = {"high": 0, "medium": 1, "low": 2}
+        order = {Priority.HIGH: 0, Priority.MEDIUM: 1, Priority.LOW: 2}
         tasks = self.owner.get_all_tasks()
-        tasks.sort(key=lambda t: (order[t.priority], t.due_time))
+        tasks.sort(key=lambda t: (order.get(t.priority.lower(), 99), t.due_time))
         return tasks
 
